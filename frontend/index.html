@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat PoC — Your Car Your Way</title>
+
+  <!-- SockJS + STOMP via CDN — aucune installation requise -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 580px;
+    }
+
+    h2 {
+      font-size: 18px;
+      color: #1e2761;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    /* ── Join form ── */
+    #join-form {
+      background: white;
+      padding: 32px;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    #join-form p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* ── Chat ── */
+    #chat-container {
+      display: none;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      flex-direction: column;
+      height: 540px;
+    }
+
+    .chat-header {
+      background: #1e2761;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header span {
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #aaa;
+      transition: background 0.3s;
+    }
+
+    .status-dot.online {
+      background: #2ecc71;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f8faff;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 72%;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .message.agent {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .message.system {
+      align-self: center;
+      align-items: center;
+      max-width: 90%;
+    }
+
+    .sender {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 3px;
+    }
+
+    .bubble {
+      padding: 9px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .message.user .bubble {
+      background: #1e2761;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.agent .bubble {
+      background: #e8eaf6;
+      color: #1e2761;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message.system .bubble {
+      background: #fff3cd;
+      color: #7b5800;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .input-area {
+      padding: 12px 16px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 8px;
+      background: white;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 9px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #1e2761;
+    }
+
+    button {
+      padding: 9px 18px;
+      background: #1e2761;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #152057;
+    }
+
+    button:disabled {
+      background: #bbb;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="wrapper">
+
+    <div id="join-form">
+      <h2>Service client — Your Car Your Way</h2>
+      <p>Entrez votre prénom pour rejoindre le chat</p>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="name-input" placeholder="Votre prénom" maxlength="100"
+          onkeydown="if(event.key==='Enter') join()" />
+        <button onclick="join()">Rejoindre</button>
+      </div>
+    </div>
+
+    <div id="chat-container">
+      <div class="chat-header">
+        <span>Support client</span>
+        <div class="status-dot" id="status-dot" title="Connexion en cours..."></div>
+      </div>
+
+      <div id="messages"></div>
+
+      <div class="input-area">
+        <input type="text" id="msg-input" placeholder="Votre message..." maxlength="1000" disabled
+          onkeydown="if(event.key==='Enter') send()" />
+        <button id="send-btn" onclick="send()" disabled>Envoyer</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let stompClient = null;
+    let senderName = '';
+
+    function join() {
+      const input = document.getElementById('name-input');
+      senderName = input.value.trim();
+      if (!senderName) return;
+
+      document.getElementById('join-form').style.display = 'none';
+      document.getElementById('chat-container').style.display = 'flex';
+
+      connect();
+    }
+
+    function connect() {
+      stompClient = new StompJs.Client({
+        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat'),
+        reconnectDelay: 5000,
+
+        onConnect: () => {
+          document.getElementById('status-dot').classList.add('online');
+          document.getElementById('msg-input').disabled = false;
+          document.getElementById('send-btn').disabled = false;
+
+          stompClient.subscribe('/topic/chat', (frame) => {
+            const msg = JSON.parse(frame.body);
+            displayMessage(msg);
+          });
+
+          stompClient.publish({
+            destination: '/app/chat.join',
+            body: JSON.stringify({ senderName, senderType: 'USER', content: '' }),
+          });
+        },
+
+        onDisconnect: () => {
+          document.getElementById('status-dot').classList.remove('online');
+          document.getElementById('msg-input').disabled = true;
+          document.getElementById('send-btn').disabled = true;
+        },
+
+        onStompError: (frame) => {
+          console.error('Erreur STOMP:', frame);
+        },
+      });
+
+      stompClient.activate();
+    }
+
+    function send() {
+      const input = document.getElementById('msg-input');
+      const content = input.value.trim();
+      if (!content || !stompClient?.connected) return;
+
+      stompClient.publish({
+        destination: '/app/chat.send',
+        body: JSON.stringify({ senderName, senderType: 'USER', content }),
+      });
+
+      input.value = '';
+    }
+
+    function displayMessage(msg) {
+      const container = document.getElementById('messages');
+
+      const div = document.createElement('div');
+      const type = msg.senderType === 'USER'
+        ? (msg.senderName === senderName ? 'user' : 'agent')
+        : 'system';
+      div.className = `message ${type}`;
+
+      if (type !== 'system') {
+        const sender = document.createElement('span');
+        sender.className = 'sender';
+        sender.textContent = msg.senderName;
+        div.appendChild(sender);
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = msg.content;
+      div.appendChild(bubble);
+
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+  </script>
+
+</body>
+
+</html>
