@@ -6,8 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat PoC — Your Car Your Way</title>
 
-  <!-- SockJS + STOMP via CDN — aucune installation requise -->
-  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <!-- StompJS via CDN — WebSocket -->
   <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
 
   <style>
@@ -203,6 +202,7 @@
 
   <div class="wrapper">
 
+    <!-- Formulaire de connexion -->
     <div id="join-form">
       <h2>Service client — Your Car Your Way</h2>
       <p>Entrez votre prénom pour rejoindre le chat</p>
@@ -213,6 +213,7 @@
       </div>
     </div>
 
+    <!-- Chat -->
     <div id="chat-container">
       <div class="chat-header">
         <span>Support client</span>
@@ -234,6 +235,7 @@
     let stompClient = null;
     let senderName = '';
 
+    // ── Rejoindre le chat ──
     function join() {
       const input = document.getElementById('name-input');
       senderName = input.value.trim();
@@ -245,9 +247,11 @@
       connect();
     }
 
+    // ── Connexion WebSocket STOMP ──
     function connect() {
       stompClient = new StompJs.Client({
-        webSocketFactory: () => new SockJS('http://localhost:8080/ws-chat'),
+        // WebSocket natif — conforme à la spécification ADD (5.3.2)
+        brokerURL: 'ws://localhost:8080/ws-chat',
         reconnectDelay: 5000,
 
         onConnect: () => {
@@ -255,11 +259,13 @@
           document.getElementById('msg-input').disabled = false;
           document.getElementById('send-btn').disabled = false;
 
+          // S'abonner au topic de chat
           stompClient.subscribe('/topic/chat', (frame) => {
             const msg = JSON.parse(frame.body);
             displayMessage(msg);
           });
 
+          // Notifier que l'utilisateur a rejoint
           stompClient.publish({
             destination: '/app/chat.join',
             body: JSON.stringify({ senderName, senderType: 'USER', content: '' }),
@@ -280,6 +286,7 @@
       stompClient.activate();
     }
 
+    // ── Envoyer un message ──
     function send() {
       const input = document.getElementById('msg-input');
       const content = input.value.trim();
@@ -293,6 +300,7 @@
       input.value = '';
     }
 
+    // ── Afficher un message reçu ──
     function displayMessage(msg) {
       const container = document.getElementById('messages');
 
