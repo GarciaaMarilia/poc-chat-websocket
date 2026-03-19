@@ -25,7 +25,6 @@ public class ChatMessage {
 
     private SenderType senderType;
 
-    @NotBlank
     @Size(max = 1000)
     private String content;
 

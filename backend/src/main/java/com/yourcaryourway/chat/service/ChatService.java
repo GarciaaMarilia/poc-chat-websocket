@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatService {
 
-    public ChatMessage processMessage(ChatMessage message) {
-        // Dans le PoC, le message est retourné tel quel.
-        // En production : persistance en base (SupportMessage),
-        // association à un ticket (SupportTicket), etc.
+       public ChatMessage processMessage(ChatMessage message) {
+        if (message.getContent() == null || message.getContent().isBlank()) {
+            throw new IllegalArgumentException("Le contenu du message ne peut pas être vide");
+        }
         return message;
     }
 

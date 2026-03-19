@@ -13,7 +13,6 @@ import java.util.Base64;
  * Convertisseur JPA — chiffre/déchiffre les données PII automatiquement.
  * Appliqué sur les champs annotés @Convert(converter = PiiEncryptionConverter.class).
  *
- * La clé AES-256 est stockée dans application.properties (jamais en dur dans le code).
  */
 @Converter
 @Component

@@ -8,19 +8,7 @@ import com.yourcaryourway.entity.Vehicle.FuelType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// ============================================================
-// Projections JPA — interfaces de résultats de requêtes
-//
-// Une projection est une interface dont Spring Data JPA
-// implémente automatiquement les getters à partir des
-// alias définis dans les @Query.
-//
-// Avantage : ne charge que les colonnes nécessaires,
-// pas toutes les relations de l'entité.
-// ============================================================
-
-
-// ── R-01 : Résultat de recherche d'offres ────────────────────
+// ── R-01 : Résultat de recherche d'offres 
 
 public interface OfferSearchResult {
     String       getOfferId();
@@ -42,7 +30,7 @@ public interface OfferSearchResult {
 }
 
 
-// ── R-02 : Historique des réservations d'un utilisateur ─────
+// ── R-02 : Historique des réservations d'un utilisateur 
 
 public interface BookingHistoryResult {
     String          getBookingId();
@@ -63,7 +51,7 @@ public interface BookingHistoryResult {
 }
 
 
-// ── R-04 : Calcul du remboursement ───────────────────────────
+// ── R-04 : Calcul du remboursement 
 
 public interface RefundResult {
     String     getBookingId();
@@ -75,7 +63,7 @@ public interface RefundResult {
 }
 
 
-// ── R-05 : Liste des réservations pour l'API agence ──────────
+// ── R-05 : Liste des réservations pour l'API agence 
 
 public interface AgencyBookingResult {
     String         getBookingId();
@@ -96,7 +84,7 @@ public interface AgencyBookingResult {
 }
 
 
-// ── R-08 : Statistiques tableau de bord ──────────────────────
+// ── R-08 : Statistiques tableau de bord 
 
 public interface BookingStatsResult {
     Long       getTotalBookings();
